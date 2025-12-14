@@ -1,5 +1,12 @@
 # Feature: Persona Agent System - Multi-Persona Knowledge Bank with ColeAI MVP
 
+**Archon Project ID**: `ac6c0e62-4022-4f7d-ab15-9e551c50be56`
+**GitHub Repository**: https://github.com/yourusername/persona-agent-system (update with actual repo URL)
+**Plan Created**: 2025-12-14
+**Status**: Ready for Implementation
+
+---
+
 The following plan should be complete, but it's important that you validate documentation and codebase patterns and task sanity before you start implementing.
 
 Pay special attention to naming of existing utils, types and models. Import from the right files etc.
