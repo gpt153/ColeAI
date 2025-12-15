@@ -1,0 +1,23 @@
+# Example override file for local development
+# Copy this to docker-compose.override.yml and add your API keys
+#
+# Usage:
+#   cp docker-compose.override.yml.example docker-compose.override.yml
+#   # Edit docker-compose.override.yml with your keys
+#   docker-compose up -d
+
+version: '3.8'
+
+services:
+  app:
+    environment:
+      # Add your API keys here (keep this file out of version control!)
+      OPENAI_API_KEY: sk-proj-...
+      ANTHROPIC_API_KEY: sk-ant-...
+      GITHUB_TOKEN: ghp_...
+
+      # Optional: Override RAG configuration
+      USE_RERANKING: "true"
+      USE_CODE_EXTRACTION: "true"
+      USE_HEADER_CHUNKING: "true"
+      USE_CONTEXTUAL_EMBEDDINGS: "false"

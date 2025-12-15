@@ -102,6 +102,66 @@ docker-compose up -d
 psql $DATABASE_URL < migrations/001_init_schema.sql
 ```
 
+### Docker Installation (Recommended)
+
+The easiest way to run ColeAI is using Docker Compose, which handles both the application and PostgreSQL setup:
+
+1. **Clone repository**:
+```bash
+git clone https://github.com/gpt153/ColeAI.git
+cd ColeAI
+```
+
+2. **Configure API keys**:
+```bash
+cp docker-compose.override.yml.example docker-compose.override.yml
+# Edit docker-compose.override.yml with your API keys:
+# - OPENAI_API_KEY
+# - ANTHROPIC_API_KEY
+# - GITHUB_TOKEN
+```
+
+3. **Start all services**:
+```bash
+docker-compose up -d --build
+```
+
+4. **Check logs**:
+```bash
+# View all logs
+docker-compose logs -f
+
+# View app logs only
+docker-compose logs -f app
+
+# View postgres logs only
+docker-compose logs -f postgres
+```
+
+5. **Access the application**:
+- **HTTP API**: http://localhost:8000
+- **API Docs**: http://localhost:8000/docs
+- **Health Check**: http://localhost:8000/health
+
+6. **Initialize with test data** (optional):
+```bash
+# Run test script inside container
+docker-compose exec app python scripts/test_github_only.py
+```
+
+7. **Stop services**:
+```bash
+docker-compose down
+```
+
+**What's included**:
+- ✅ PostgreSQL 16 with pgvector extension
+- ✅ Automatic database initialization (migrations run on first start)
+- ✅ FastAPI server on port 8000
+- ✅ MCP server on port 8100
+- ✅ Health checks and automatic restarts
+- ✅ Persistent data storage (Docker volumes)
+
 ---
 
 ## ⚙️ Configuration
