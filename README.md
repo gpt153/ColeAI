@@ -104,7 +104,12 @@ psql $DATABASE_URL < migrations/001_init_schema.sql
 
 ### Docker Installation (Recommended)
 
-The easiest way to run ColeAI is using Docker Compose, which handles both the application and PostgreSQL setup:
+The easiest way to run ColeAI is using Docker Compose, which handles both the application and PostgreSQL setup.
+
+**System Requirements**:
+- Docker 20.10+ with Docker Compose V2
+- At least 8GB RAM
+- At least 10GB free disk space (dependencies include PyTorch, Transformers, etc.)
 
 1. **Clone repository**:
 ```bash
