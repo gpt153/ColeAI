@@ -49,7 +49,7 @@ Thumbs.db
 # Data directories
 data/
 crawled_data/
-vector_store/
+vector_data/
 
 # Temporary files
 tmp/
