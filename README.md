@@ -106,10 +106,53 @@ psql $DATABASE_URL < migrations/001_init_schema.sql
 
 The easiest way to run ColeAI is using Docker Compose, which handles both the application and PostgreSQL setup.
 
+#### Option A: Pre-built Image (Fastest) ⭐
+
+Use the pre-built image from GitHub Container Registry - no local build required!
+
 **System Requirements**:
 - Docker 20.10+ with Docker Compose V2
 - At least 8GB RAM
-- At least 10GB free disk space (dependencies include PyTorch, Transformers, etc.)
+- At least 2GB free disk space (just to pull the image)
+
+**Steps:**
+
+1. **Clone repository**:
+```bash
+git clone https://github.com/gpt153/ColeAI.git
+cd ColeAI
+```
+
+2. **Configure API keys**:
+```bash
+cp docker-compose.override.yml.example docker-compose.override.yml
+# Edit docker-compose.override.yml with your API keys
+```
+
+3. **Start services** (uses pre-built image):
+```bash
+docker compose -f docker-compose.prebuilt.yml up -d
+```
+
+4. **Check logs**:
+```bash
+docker compose -f docker-compose.prebuilt.yml logs -f app
+```
+
+5. **Access**:
+- API: http://localhost:8000
+- Docs: http://localhost:8000/docs
+
+---
+
+#### Option B: Build Locally
+
+Build the Docker image yourself. Requires more disk space and time.
+
+**System Requirements**:
+- Docker 20.10+ with Docker Compose V2
+- At least 8GB RAM
+- At least 10GB free disk space (for build process)
 
 1. **Clone repository**:
 ```bash
