@@ -20,55 +20,90 @@ class YouTubeCrawler(BaseCrawler):
             channel_url: YouTube channel URL or @username
             **kwargs:
                 max_videos: int - Limit number of videos (default: None = all)
+                rate_limit_delay: float - Delay in seconds between videos (default: 0)
 
         Returns:
             List of video content dictionaries
         """
         max_videos = kwargs.get("max_videos", None)
+        rate_limit_delay = kwargs.get("rate_limit_delay", 0)
 
-        ydl_opts = {
+        # Use channel /videos tab instead of uploads playlist to bypass API limits
+        logger.info(f"Fetching channel info from {channel_url}")
+
+        # Ensure we use the /videos tab URL which doesn't have the 100-item limit
+        if '/videos' not in channel_url:
+            videos_url = f"{channel_url.rstrip('/')}/videos"
+        else:
+            videos_url = channel_url
+
+        logger.info(f"Using videos URL: {videos_url}")
+
+        # Extract videos from the channel /videos tab
+        ydl_opts_videos = {
             'quiet': True,
-            'extract_flat': True,  # Get video list without downloading
-            'force_generic_extractor': False,
+            'ignoreerrors': True,  # Continue on errors
+            'skip_download': True,  # Don't download videos
+            'no_warnings': True,
+            'extract_flat': True,  # Use flat extraction for channel /videos tab
+            'lazy_playlist': False,  # Force complete extraction
+            'extractor_args': {
+                'youtube:tab': {
+                    'skip': ['authcheck'],  # Skip auth check for better pagination
+                }
+            },
         }
+
+        if max_videos:
+            ydl_opts_videos['playlistend'] = max_videos
+        else:
+            # For all videos, ensure we don't stop early
+            ydl_opts_videos['playliststart'] = 1
 
         videos = []
 
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        with yt_dlp.YoutubeDL(ydl_opts_videos) as ydl:
             try:
-                # Get channel info and video list
-                channel_info = ydl.extract_info(channel_url, download=False)
+                channel_info = ydl.extract_info(videos_url, download=False)
 
                 if 'entries' not in channel_info:
-                    logger.warning(f"No videos found for {channel_url}")
+                    logger.warning(f"No videos found in channel")
                     return []
 
-                video_urls = [
-                    f"https://www.youtube.com/watch?v={entry['id']}"
-                    for entry in channel_info['entries']
-                    if entry.get('id')
-                ]
+                # Filter out None entries
+                video_entries = [e for e in channel_info['entries'] if e and e.get('id')]
 
-                if max_videos:
-                    video_urls = video_urls[:max_videos]
-
-                logger.info(f"Found {len(video_urls)} videos to process")
+                logger.info(f"Found {len(video_entries)} videos to process (total available: {channel_info.get('playlist_count', len(video_entries))})")
 
                 # Extract transcripts for each video
-                for video_url in video_urls:
+                import asyncio
+                for idx, entry in enumerate(video_entries, 1):
+                    video_id = entry.get('id')
+                    if not video_id:
+                        continue
+
+                    video_url = f"https://www.youtube.com/watch?v={video_id}"
+
                     try:
+                        logger.info(f"[{idx}/{len(video_entries)}] Processing {entry.get('title', video_url)[:60]}...")
                         transcript_data = await self._get_video_transcript(video_url)
                         if transcript_data:
                             videos.append(transcript_data)
+                        else:
+                            logger.warning(f"No transcript for {entry.get('title', video_url)}")
                     except Exception as e:
                         logger.error(f"Failed to get transcript for {video_url}: {e}")
                         continue
 
-                logger.info(f"Successfully extracted {len(videos)} transcripts")
+                    # Rate limiting delay
+                    if rate_limit_delay > 0 and idx < len(video_entries):
+                        await asyncio.sleep(rate_limit_delay)
+
+                logger.info(f"Successfully extracted {len(videos)} transcripts out of {len(video_entries)} videos")
                 return videos
 
             except Exception as e:
-                logger.error(f"Failed to crawl YouTube channel: {e}", exc_info=True)
+                logger.error(f"Failed to crawl playlist: {e}", exc_info=True)
                 raise
 
     async def _get_video_transcript(self, video_url: str) -> Dict[str, Any] | None:
@@ -100,8 +135,8 @@ class YouTubeCrawler(BaseCrawler):
                     response = await client.get(subtitle_url)
                     subtitle_text = response.text
 
-                # Parse VTT format and extract text
-                transcript = self._parse_vtt(subtitle_text)
+                # Parse subtitle format (JSON3 or VTT) and extract text
+                transcript = self._parse_subtitle(subtitle_text)
 
                 return {
                     'title': info.get('title', 'Unknown'),
@@ -118,9 +153,31 @@ class YouTubeCrawler(BaseCrawler):
                 logger.error(f"Error extracting transcript: {e}")
                 return None
 
-    def _parse_vtt(self, vtt_text: str) -> str:
-        """Parse VTT subtitle format and extract clean text."""
-        lines = vtt_text.split('\n')
+    def _parse_subtitle(self, subtitle_text: str) -> str:
+        """Parse subtitle format (JSON3 or VTT) and extract clean text."""
+        # Try JSON3 format first (YouTube's automatic captions)
+        if subtitle_text.strip().startswith('{'):
+            try:
+                import json
+                data = json.loads(subtitle_text)
+
+                # Extract text from JSON3 events
+                text_parts = []
+                events = data.get('events', [])
+
+                for event in events:
+                    segs = event.get('segs', [])
+                    for seg in segs:
+                        text = seg.get('utf8', '')
+                        if text and text != '\n':
+                            text_parts.append(text)
+
+                return ' '.join(text_parts)
+            except json.JSONDecodeError:
+                logger.warning("Failed to parse as JSON3, falling back to VTT")
+
+        # Fall back to VTT format
+        lines = subtitle_text.split('\n')
         text_lines = []
 
         for line in lines:
