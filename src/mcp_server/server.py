@@ -4,12 +4,13 @@ from src.database import AsyncSessionLocal
 from src.agents.persona_agent import query_persona
 from src.models import Persona
 from sqlalchemy import select
+from src.config import settings
 import logging
 
 logger = logging.getLogger(__name__)
 
-# Create MCP server
-mcp = FastMCP("persona-knowledge")
+# Create MCP server with SSE transport for remote access
+mcp = FastMCP("persona-knowledge", host="0.0.0.0", port=settings.mcp_server_port)
 
 
 @mcp.tool()
@@ -55,5 +56,5 @@ async def list_available_personas() -> List[str]:
 
 
 if __name__ == "__main__":
-    # Run MCP server
-    mcp.run()
+    # Run MCP server with SSE transport for remote access (Claude Code)
+    mcp.run(transport="sse")

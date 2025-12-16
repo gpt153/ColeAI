@@ -28,6 +28,7 @@ services:
     image: ghcr.io/gpt153/coleai:latest  # Pre-built image from GitHub
     pull_policy: always  # Always pull latest version
     container_name: coleai_app
+    command: ["/bin/bash", "/app/start-services.sh"]  # Run both API and MCP server
     environment:
       # Database
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/persona_agents
@@ -67,6 +68,7 @@ services:
       - "8100:8100"  # MCP Server
     volumes:
       - ./data:/app/data  # For persistent data (optional)
+      - ./start-services.sh:/app/start-services.sh:ro  # Startup script for both services
     depends_on:
       postgres:
         condition: service_healthy

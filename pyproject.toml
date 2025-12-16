@@ -13,7 +13,7 @@ uvicorn = {extras = ["standard"], version = "^0.32.0"}
 sqlalchemy = "^2.0.0"
 asyncpg = "^0.30.0"
 pgvector = "^0.3.0"
-# fastmcp = "^0.5.0"  # TODO: Find correct MCP package
+fastmcp = "^2.14.0"
 yt-dlp = "^2024.0.0"
 pygithub = "^2.0.0"
 openai = "^1.0.0"
