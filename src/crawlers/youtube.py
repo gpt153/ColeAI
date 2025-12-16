@@ -21,12 +21,16 @@ class YouTubeCrawler(BaseCrawler):
             **kwargs:
                 max_videos: int - Limit number of videos (default: None = all)
                 rate_limit_delay: float - Delay in seconds between videos (default: 0)
+                cookies_from_browser: str - Browser to extract cookies from (chrome, firefox, etc.)
+                cookies_file: str - Path to Netscape cookies file
 
         Returns:
             List of video content dictionaries
         """
         max_videos = kwargs.get("max_videos", None)
         rate_limit_delay = kwargs.get("rate_limit_delay", 0)
+        cookies_from_browser = kwargs.get("cookies_from_browser", None)
+        cookies_file = kwargs.get("cookies_file", None)
 
         # Use channel /videos tab instead of uploads playlist to bypass API limits
         logger.info(f"Fetching channel info from {channel_url}")
@@ -53,6 +57,14 @@ class YouTubeCrawler(BaseCrawler):
                 }
             },
         }
+
+        # Add cookie authentication to bypass bot detection
+        if cookies_from_browser:
+            ydl_opts_videos['cookiesfrombrowser'] = (cookies_from_browser,)
+            logger.info(f"Using cookies from browser: {cookies_from_browser}")
+        elif cookies_file:
+            ydl_opts_videos['cookiefile'] = cookies_file
+            logger.info(f"Using cookies from file: {cookies_file}")
 
         if max_videos:
             ydl_opts_videos['playlistend'] = max_videos
@@ -86,7 +98,11 @@ class YouTubeCrawler(BaseCrawler):
 
                     try:
                         logger.info(f"[{idx}/{len(video_entries)}] Processing {entry.get('title', video_url)[:60]}...")
-                        transcript_data = await self._get_video_transcript(video_url)
+                        transcript_data = await self._get_video_transcript(
+                            video_url,
+                            cookies_from_browser=cookies_from_browser,
+                            cookies_file=cookies_file
+                        )
                         if transcript_data:
                             videos.append(transcript_data)
                         else:
@@ -106,7 +122,12 @@ class YouTubeCrawler(BaseCrawler):
                 logger.error(f"Failed to crawl playlist: {e}", exc_info=True)
                 raise
 
-    async def _get_video_transcript(self, video_url: str) -> Dict[str, Any] | None:
+    async def _get_video_transcript(
+        self,
+        video_url: str,
+        cookies_from_browser: str = None,
+        cookies_file: str = None
+    ) -> Dict[str, Any] | None:
         """Extract transcript from a single video."""
         ydl_opts = {
             'writesubtitles': True,
@@ -115,6 +136,12 @@ class YouTubeCrawler(BaseCrawler):
             'quiet': True,
             'subtitleslangs': ['en'],
         }
+
+        # Add cookie authentication
+        if cookies_from_browser:
+            ydl_opts['cookiesfrombrowser'] = (cookies_from_browser,)
+        elif cookies_file:
+            ydl_opts['cookiefile'] = cookies_file
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             try:
